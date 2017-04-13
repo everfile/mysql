@@ -1,0 +1,124 @@
+#!/bin/bash
+
+# 判断是否是Mac
+is_mac(){
+	uname=`uname`
+	if [ "X${uname}" == "XDarwin" ]; then
+		return 0 # is mac
+	else
+		return 1 # not is mac
+	fi
+}
+
+# Installation PREFIX
+PREFIX="/usr/local"
+
+# Config file
+CONFIG_FILE="/usr/local/etc/mysql.conf"
+
+# Who to run the mysql
+MYUSER="www-data"
+
+# 检测是否私有具有 root 权限
+if [ $UID -ne 0 ]; then
+	echo "You do not have permission, Please run the command as root!"
+	exit 0
+fi
+
+# 是否运行
+is_running(){
+	if is_mac ; then
+		# 1234 /bin/sh ./bin/mysqld_safe --defaults-file=/usr/local/etc/mysql.conf --user=www-data
+		pid=`ps -u root -o pid,args | awk '/.\/bin\/mysqld_safe/ {print $1}'`
+	else
+		# 1234 /bin/sh ./bin/mysqld_safe --defaults-file=/usr/local/etc/mysql.conf --user=www-data
+		pid=`ps -u root -o pid,args | awk '/.\/bin\/mysqld_safe/ {print $1}'`
+	fi
+
+	if [ "X${pid}" != "X" ]; then
+		return 0 # running
+	else
+		return 1 # not running
+	fi
+}
+
+# 状态
+status(){
+	if is_running ; then
+		echo "MySQL is running ..."
+		mysqladmin -u localroot status
+	else
+		echo "MySQL is not running ..."
+	fi
+}
+
+# 启动
+start(){
+	if is_running ; then
+		echo "MySQL is already running..."
+		exit 0
+	fi
+	echo -n "Starting MySQL:"
+	(cd "$PREFIX" && ./bin/mysqld_safe --defaults-file=$CONFIG_FILE --user=$MYUSER >/tmp/mysql-start.log &)
+	echo "ok"
+}
+
+# 停止
+stop(){
+	if ! is_running ; then
+		echo "MySQL is not running..."
+		exit 0
+	fi
+	echo -n "Stopping MySQL:"
+	mysqladmin -u localroot shutdown
+	echo "ok"
+}
+
+# Parse command line parameters.
+case $1 in
+	# 英文启动
+	start)
+		start
+	;;
+	# 英文停止
+	stop)
+		stop
+	;;
+	# 英文重启
+	restart)
+		stop
+		sleep 1
+		start
+	;;
+	# 英文状态
+	status)
+		status
+	;;
+
+	# 拼音启动
+	q)
+		start
+	;;
+	# 拼音停止
+	t)
+		stop
+	;;
+	# 拼音重启
+	c)
+		stop
+		sleep 1
+		start
+	;;
+	# 拼音状态
+	z)
+		status
+	;;
+
+	*)
+	# Print help
+		echo "Usage:$0 {start|stop|status|restart}" 1>&2
+		exit 0
+	;;
+esac
+
+exit 0
